@@ -283,82 +283,77 @@ function analyzeAST(ast) {
     return { gateCounts, variables };
 }
 
-function updateSummary(gateCounts, variables, ast) {
+function updateSummary(gateCounts, variables, ast, equationStr) {
     let summaryContent = document.getElementById('summary-content');
     
-    let uniqueVars = Array.from(variables).sort();
-    let intro = "";
-    if (uniqueVars.length === 0) {
-        intro = "We have no inputs.";
-    } else if (uniqueVars.length === 1) {
-        intro = `We have 1 input <strong>${uniqueVars[0]}</strong>.`;
-    } else {
-        let last = uniqueVars.pop();
-        intro = `We have ${uniqueVars.length + 1} inputs <strong>${uniqueVars.join(', ')}</strong> and <strong>${last}</strong>.`;
-        uniqueVars.push(last);
-    }
-    
-    let steps = [];
-    let seen = new Set();
-    
-    function generateSteps(node) {
-        if (node.type === 'VAR') return node.value;
+    function generateNarrative(node, isRoot) {
+        let steps = [];
         
-        if (node.type === 'NOT') {
-            let op = generateSteps(node.operand);
-            let expr = `${op}'`;
-            if (node.operand.type === 'OR' || node.operand.type === 'AND') {
-                expr = `(${op})'`;
+        function traverse(n, isTopNode) {
+            if (n.type === 'VAR') {
+                return { text: n.value, isGate: false };
             }
-            if (!seen.has(expr)) {
-                let textOp = node.operand.type === 'VAR' ? op : `(${op})`;
-                steps.push(`Putting a NOT gate on <strong>${textOp}</strong> makes it <strong>${expr}</strong>.`);
-                seen.add(expr);
+            if (n.type === 'NOT') {
+                let inner = traverse(n.operand, false);
+                if (!inner.isGate) {
+                    return { text: inner.text + "'", isGate: false };
+                }
+                
+                let prefix = steps.length === 0 ? "It is a combinational circuit where" : (isTopNode ? "finally" : "after that");
+                steps.push(`${prefix} ${inner.text} is associated with one not gate`);
+                return { text: `the not gate`, isGate: true };
             }
-            return expr;
+            
+            if (n.type === 'AND' || n.type === 'OR') {
+                let operands = [];
+                function collect(curr) {
+                    if (curr.type === n.type) {
+                        collect(curr.left);
+                        collect(curr.right);
+                    } else {
+                        operands.push(traverse(curr, false));
+                    }
+                }
+                collect(n);
+                
+                let opNames = operands.map(o => o.text);
+                let subject = opNames.join(',');
+                
+                if (operands.every(o => o.isGate) && opNames.length === 2) {
+                    subject = opNames[0] + " and " + opNames[1].replace("the ", "");
+                } else if (operands.some(o => o.isGate)) {
+                    subject = opNames.join(' and ');
+                }
+                
+                let gateType = n.type.toLowerCase();
+                let prefix = steps.length === 0 ? "It is a combinational circuit where" : (isTopNode ? "finally" : "after that");
+                
+                let verbPhrase = (operands.length === 2 && operands.every(o => o.isGate)) ? "they both are associated" : "are associated";
+                
+                steps.push(`${prefix} ${subject} ${verbPhrase} with one ${gateType} gate`);
+                return { text: `the ${gateType} gate`, isGate: true };
+            }
         }
         
-        if (node.type === 'AND') {
-            let left = generateSteps(node.left);
-            let right = generateSteps(node.right);
-            
-            let lStr = (node.left.type === 'OR') ? `(${left})` : left;
-            let rStr = (node.right.type === 'OR') ? `(${right})` : right;
-            let expr = `${lStr} ${rStr}`;
-            
-            if (!seen.has(expr)) {
-                steps.push(`Putting <strong>${lStr}</strong> and <strong>${rStr}</strong> together into an AND gate makes <strong>${expr}</strong>.`);
-                seen.add(expr);
-            }
-            return expr;
+        if (node.type === 'VAR') {
+            return `It is a combinational circuit where the final result is simply ${node.value}.`;
         }
         
-        if (node.type === 'OR') {
-            let left = generateSteps(node.left);
-            let right = generateSteps(node.right);
-            
-            let expr = `${left} + ${right}`;
-            
-            if (!seen.has(expr)) {
-                steps.push(`Putting <strong>${left}</strong> and <strong>${right}</strong> into an OR gate makes <strong>${expr}</strong>.`);
-                seen.add(expr);
-            }
-            return expr;
-        }
+        traverse(node, true);
+        
+        let fullText = steps.join(" ");
+        fullText += ` after that we got the final result ${equationStr}`;
+        return fullText;
     }
     
-    let finalExpr = generateSteps(ast);
+    let narrative = generateNarrative(ast, true);
     
-    let narrative = intro + " ";
-    if (steps.length === 0) {
-        narrative += `The output is directly connected to <strong>${finalExpr}</strong>.`;
-    } else {
-        narrative += steps.join(" ") + ` This gives our final output <strong>${finalExpr}</strong>.`;
-    }
+    // Capitalize first letter just to be safe, though the user example is mostly lowercase inside
+    narrative = narrative.charAt(0).toUpperCase() + narrative.slice(1);
     
     summaryContent.innerHTML = `
-        <p style="margin-bottom: 1rem; line-height: 1.8;">${narrative}</p>
-        <ul style="list-style-type: none; border-top: 1px solid #e4e7eb; padding-top: 1rem;">
+        <p style="margin-bottom: 1rem; line-height: 1.6; font-size: 14px;">${narrative}</p>
+        <ul style="list-style-type: none; border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;">
             <li><strong>Total Gates Used:</strong> ${gateCounts.AND + gateCounts.OR + gateCounts.NOT} 
             (AND: ${gateCounts.AND}, OR: ${gateCounts.OR}, NOT: ${gateCounts.NOT})</li>
         </ul>
@@ -572,7 +567,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         
         renderCircuit();
         
-        updateSummary(gateCounts, variables, ast);
+        updateSummary(gateCounts, variables, ast, equationStr);
         generateTruthTable(ast, uniqueVars);
         document.getElementById('error-msg').style.display = 'none';
         
