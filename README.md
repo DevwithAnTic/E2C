@@ -1,6 +1,6 @@
 # E2C: Expression to Logic Circuit Converter
 
-![GitHub License](https://img.shields.io/github/license/DevwithAnTic/E2C?style=flat-square)
+![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg?style=flat-square)
 ![GitHub stars](https://img.shields.io/github/stars/DevwithAnTic/E2C?style=flat-square)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
@@ -48,4 +48,6 @@ E2C is built from scratch without any external diagramming libraries (like Joint
 
 ## License
 
-MIT
+This project is licensed under the [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/) license. 
+
+You are free to use, modify, and share this educational tool, but you **may not** use the material for commercial purposes.
