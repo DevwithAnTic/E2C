@@ -98,21 +98,21 @@ class Parser {
 
 function computeHeights(astNode) {
     if (astNode.type === 'VAR') {
-        astNode.h = 20; // Don't contribute much height to the tree block
+        astNode.h = 30;
     } else if (astNode.type === 'NOT') {
         computeHeights(astNode.operand);
         astNode.h = Math.max(50, astNode.operand.h);
     } else {
         computeHeights(astNode.left);
         computeHeights(astNode.right);
-        astNode.h = astNode.left.h + astNode.right.h + 20;
+        astNode.h = astNode.left.h + astNode.right.h + 30;
     }
     return astNode.h;
 }
 
 function setPositions(astNode, xRight, yCenter) {
     if (astNode.type === 'VAR') {
-        return; // Set from global varMap later
+        return; 
     }
     
     astNode.x = xRight - 60; 
@@ -123,10 +123,8 @@ function setPositions(astNode, xRight, yCenter) {
     if (astNode.type === 'NOT') {
         setPositions(astNode.operand, childXRight, yCenter); 
     } else {
-        let totalH = astNode.left.h + astNode.right.h + 20;
-        let startY = yCenter - totalH / 2;
-        let leftY = startY + astNode.left.h / 2;
-        let rightY = startY + astNode.left.h + 20 + astNode.right.h / 2;
+        let leftY = yCenter - 15 - astNode.left.h / 2;
+        let rightY = yCenter + 15 + astNode.right.h / 2;
         
         setPositions(astNode.left, childXRight, leftY);
         setPositions(astNode.right, childXRight, rightY);
@@ -137,73 +135,126 @@ function getOutputPort(node) {
     if (node.type === 'AND') return {x: node.x + 50, y: node.y};
     if (node.type === 'OR') return {x: node.x + 50, y: node.y};
     if (node.type === 'NOT') return {x: node.x + 50, y: node.y}; 
-    if (node.type === 'VAR') return {x: node.x + 30, y: node.y};
+    if (node.type === 'VAR') return {x: node.x + 20, y: node.y};
 }
 
 function getInputPorts(node) {
-    if (node.type === 'AND') return [{x: node.x, y: node.y - 10}, {x: node.x, y: node.y + 10}];
-    if (node.type === 'OR') return [{x: node.x + 5, y: node.y - 12}, {x: node.x + 5, y: node.y + 12}];
+    if (node.type === 'AND') return [{x: node.x, y: node.y - 12}, {x: node.x, y: node.y + 12}];
+    if (node.type === 'OR') return [{x: node.x + 6, y: node.y - 12}, {x: node.x + 6, y: node.y + 12}];
     if (node.type === 'NOT') return [{x: node.x, y: node.y}];
     return [];
 }
 
+let verticalWires = [];
+let horizontalWires = [];
+let junctionDots = [];
+
+function addWireSegment(x1, y1, x2, y2) {
+    if (x1 === x2) {
+        verticalWires.push({x: x1, y1: Math.min(y1, y2), y2: Math.max(y1, y2)});
+    } else if (y1 === y2) {
+        horizontalWires.push({y: y1, x1: Math.min(x1, x2), x2: Math.max(x1, x2)});
+    }
+}
+
 function drawWire(ctx, x1, y1, x2, y2) {
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    
     let midX = x1 + Math.max(15, (x2 - x1) / 2);
-    ctx.lineTo(midX, y1);
-    ctx.lineTo(midX, y2);
-    ctx.lineTo(x2, y2);
-    
-    ctx.stroke();
+    addWireSegment(x1, y1, midX, y1);
+    addWireSegment(midX, y1, midX, y2);
+    addWireSegment(midX, y2, x2, y2);
 }
 
 function drawVarWire(ctx, x1, y1, x2, y2, busX) {
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(busX, y1);
-    ctx.lineTo(busX, y2);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
+    addWireSegment(x1, y1, busX, y1);
+    addWireSegment(busX, y1, busX, y2);
+    addWireSegment(busX, y2, x2, y2);
+    junctionDots.push({x: busX, y: y1});
+}
+
+function renderWires(ctx) {
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
     
     ctx.beginPath();
-    ctx.arc(busX, y1, 3, 0, 2 * Math.PI);
-    ctx.fillStyle = '#333';
+    for (let v of verticalWires) {
+        ctx.moveTo(v.x, v.y1);
+        ctx.lineTo(v.x, v.y2);
+    }
+    ctx.stroke();
+    
+    const R = 6;
+    ctx.beginPath();
+    for (let h of horizontalWires) {
+        let intersectX = [];
+        for (let v of verticalWires) {
+            let isJunction = junctionDots.some(d => d.x === v.x && d.y === h.y);
+            if (!isJunction && v.x > h.x1 && v.x < h.x2 && h.y > v.y1 && h.y < v.y2) {
+                intersectX.push(v.x);
+            }
+        }
+        intersectX.sort((a, b) => a - b);
+        
+        let currX = h.x1;
+        for (let ix of intersectX) {
+            ctx.moveTo(currX, h.y);
+            ctx.lineTo(ix - R, h.y);
+            ctx.arc(ix, h.y, R, Math.PI, 0, false);
+            currX = ix + R;
+        }
+        ctx.moveTo(currX, h.y);
+        ctx.lineTo(h.x2, h.y);
+    }
+    ctx.stroke();
+    
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    for (let d of junctionDots) {
+        ctx.moveTo(d.x, d.y);
+        ctx.arc(d.x, d.y, 5, 0, 2 * Math.PI);
+    }
     ctx.fill();
 }
 
 function drawGate(ctx, type, x, y, label) {
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#333';
-    ctx.fillStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000000';
+    ctx.fillStyle = '#ffffff';
+    
+    let showLabels = document.getElementById('show-labels') ? document.getElementById('show-labels').checked : true;
     
     ctx.beginPath();
     if (type === 'AND') {
-        ctx.moveTo(x, y - 20);
-        ctx.lineTo(x + 30, y - 20);
-        ctx.arc(x + 30, y, 20, -Math.PI/2, Math.PI/2);
-        ctx.lineTo(x, y + 20);
+        ctx.moveTo(x, y - 25);
+        ctx.lineTo(x + 25, y - 25);
+        ctx.arc(x + 25, y, 25, -Math.PI/2, Math.PI/2);
+        ctx.lineTo(x, y + 25);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
         
-        ctx.fillStyle = '#333';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('AND', x + 10, y + 4);
+        if (showLabels) {
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px "MS Sans Serif", Tahoma, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('AND', x + 21, y + 4);
+            ctx.textAlign = 'left';
+        }
     } else if (type === 'OR') {
-        ctx.moveTo(x, y - 20);
-        ctx.quadraticCurveTo(x + 15, y, x, y + 20);
-        ctx.lineTo(x + 20, y + 20);
-        ctx.quadraticCurveTo(x + 50, y + 20, x + 50, y);
-        ctx.quadraticCurveTo(x + 50, y - 20, x + 20, y - 20);
+        ctx.moveTo(x, y - 25);
+        ctx.quadraticCurveTo(x + 30, y - 25, x + 50, y);
+        ctx.quadraticCurveTo(x + 30, y + 25, x, y + 25);
+        ctx.quadraticCurveTo(x + 15, y, x, y - 25);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
         
-        ctx.fillStyle = '#333';
-        ctx.font = '12px sans-serif';
-        ctx.fillText('OR', x + 16, y + 4);
+        if (showLabels) {
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px "MS Sans Serif", Tahoma, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('OR', x + 22, y + 4);
+            ctx.textAlign = 'left';
+        }
     } else if (type === 'NOT') {
         ctx.moveTo(x, y - 15);
         ctx.lineTo(x + 40, y);
@@ -217,13 +268,27 @@ function drawGate(ctx, type, x, y, label) {
         ctx.fill();
         ctx.stroke();
         
-        ctx.fillStyle = '#333';
-        ctx.font = '10px sans-serif';
-        ctx.fillText('NOT', x + 5, y + 3);
+        if (showLabels) {
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 10px "MS Sans Serif", Tahoma, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('NOT', x + 12, y + 3);
+            ctx.textAlign = 'left';
+        }
     } else if (type === 'VAR') {
-        ctx.font = '18px bold monospace';
-        ctx.fillStyle = '#2c3e50';
-        ctx.fillText(label, x - 10, y + 6);
+        ctx.beginPath();
+        ctx.rect(x - 4, y - 12, 24, 24);
+        ctx.fillStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#000000';
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.font = 'bold 16px "Courier New", monospace';
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.fillText(label, x + 8, y + 5);
+        ctx.textAlign = 'left';
     }
 }
 
@@ -259,8 +324,15 @@ function drawAST(ctx, node, varBusX) {
         drawAST(ctx, node.left, varBusX);
         drawAST(ctx, node.right, varBusX);
     }
-    
-    drawGate(ctx, node.type, node.x, node.y, node.value);
+}
+
+function drawAllGates(ctx, node) {
+    if (node.type !== 'VAR') {
+        drawGate(ctx, node.type, node.x, node.y, node.value);
+        if (node.left) drawAllGates(ctx, node.left);
+        if (node.right) drawAllGates(ctx, node.right);
+        if (node.operand) drawAllGates(ctx, node.operand);
+    }
 }
 
 function analyzeAST(ast) {
@@ -288,6 +360,8 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
     
     function generateNarrative(node, isRoot) {
         let steps = [];
+        let totalGates = gateCounts.AND + gateCounts.OR + gateCounts.NOT;
+        let firstPrefix = totalGates < 2 ? "In this circuit," : "It is a combinational circuit where";
         
         function traverse(n, isTopNode) {
             if (n.type === 'VAR') {
@@ -299,9 +373,9 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
                     return { text: inner.text + "'", isGate: false };
                 }
                 
-                let prefix = steps.length === 0 ? "It is a combinational circuit where" : (isTopNode ? "Finally," : "After that,");
-                steps.push(`${prefix} ${inner.text} is associated with one not gate.`);
-                return { text: `the not gate`, isGate: true };
+                let prefix = steps.length === 0 ? firstPrefix : (isTopNode ? "Finally," : "After that,");
+                steps.push(`${prefix} ${inner.text} is associated with one NOT gate.`);
+                return { text: `the NOT gate`, isGate: true };
             }
             
             if (n.type === 'AND' || n.type === 'OR') {
@@ -331,8 +405,8 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
                     subject = opNames.slice(0, -1).join(', ') + ", and " + opNames[opNames.length - 1];
                 }
                 
-                let gateType = n.type.toLowerCase();
-                let prefix = steps.length === 0 ? "It is a combinational circuit where" : (isTopNode ? "Finally," : "After that,");
+                let gateType = n.type;
+                let prefix = steps.length === 0 ? firstPrefix : (isTopNode ? "Finally," : "After that,");
                 
                 let verbPhrase = (operands.length === 2 && operands.every(o => o.isGate)) ? "they both are associated" : "are associated";
                 
@@ -342,7 +416,7 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
         }
         
         if (node.type === 'VAR') {
-            return `It is a combinational circuit where the final result is simply ${node.value}.`;
+            return `In this circuit, the final result is simply ${node.value}.`;
         }
         
         traverse(node, true);
@@ -360,7 +434,7 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
     let uniqueVars = Array.from(variables).sort();
     
     summaryContent.innerHTML = `
-        <p style="margin-bottom: 1rem; line-height: 1.6; font-size: 14px;">${narrative}</p>
+        <p style="margin-bottom: 1rem; line-height: 1.6;">${narrative}</p>
         <ul style="list-style-type: none; border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;">
             <li style="margin-bottom: 5px;"><strong>Number of Inputs:</strong> ${uniqueVars.length} (${uniqueVars.join(', ') || 'None'})</li>
             <li><strong>Total Gates Used:</strong> ${gateCounts.AND + gateCounts.OR + gateCounts.NOT} 
@@ -385,7 +459,7 @@ let currentScale = 1.0;
 
 function renderCircuit() {
     if (!currentRenderState) return;
-    const {ast, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight} = currentRenderState;
+    const {ast, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight, equationStr} = currentRenderState;
     
     let canvas = document.getElementById('circuit-canvas');
     let ctx = canvas.getContext('2d');
@@ -396,17 +470,34 @@ function renderCircuit() {
     ctx.scale(currentScale, currentScale);
     ctx.clearRect(0, 0, requiredWidth, requiredHeight);
     
+    verticalWires = [];
+    horizontalWires = [];
+    junctionDots = [];
+    
+    let outPort = getOutputPort(ast);
+    addWireSegment(outPort.x, outPort.y, outPort.x + 30, outPort.y);
+    
+    drawAST(ctx, ast, varBusX);
+    
+    renderWires(ctx);
+    
     uniqueVars.forEach(v => {
         drawGate(ctx, 'VAR', varMap[v].x, varMap[v].y, v);
     });
     
-    let outPort = getOutputPort(ast);
-    drawWire(ctx, outPort.x, outPort.y, outPort.x + 40, outPort.y);
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillStyle = '#2c3e50';
-    ctx.fillText('OUTPUT', outPort.x + 45, outPort.y + 5);
+    drawAllGates(ctx, ast);
     
-    drawAST(ctx, ast, varBusX);
+    ctx.beginPath();
+    ctx.arc(outPort.x + 42, outPort.y, 12, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000000';
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.font = 'bold 16px "Courier New", monospace';
+    ctx.fillStyle = '#000000';
+    ctx.fillText(equationStr, outPort.x + 60, outPort.y + 5);
 }
 
 document.getElementById('circuit-canvas').addEventListener('wheel', (e) => {
@@ -457,6 +548,40 @@ document.getElementById('circuit-canvas').addEventListener('touchend', (e) => {
     if (e.touches.length < 2) {
         initialPinchDistance = null;
     }
+});
+
+const container = document.querySelector('.circuit-container');
+let isDragging = false;
+let startX, startY, scrollLeft, scrollTop;
+
+container.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    container.classList.add('is-grabbing');
+    startX = e.pageX - container.offsetLeft;
+    startY = e.pageY - container.offsetTop;
+    scrollLeft = container.scrollLeft;
+    scrollTop = container.scrollTop;
+});
+
+container.addEventListener('mouseleave', () => {
+    isDragging = false;
+    container.classList.remove('is-grabbing');
+});
+
+container.addEventListener('mouseup', () => {
+    isDragging = false;
+    container.classList.remove('is-grabbing');
+});
+
+container.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - container.offsetLeft;
+    const y = e.pageY - container.offsetTop;
+    const walkX = (x - startX);
+    const walkY = (y - startY);
+    container.scrollLeft = scrollLeft - walkX;
+    container.scrollTop = scrollTop - walkY;
 });
 
 function evaluateAST(node, assignments) {
@@ -550,11 +675,13 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         findBounds(ast);
         
         let varsWidth = 50 + uniqueVars.length * 15 + 40; 
-        let requiredWidth = Math.max(800, -minX + varsWidth + 150);
+        let equationTextWidth = equationStr.length * 12;
+        let rightPadding = Math.max(200, equationTextWidth + 100);
+        let requiredWidth = Math.max(800, -minX + varsWidth + rightPadding);
         let varsHeight = uniqueVars.length * 60;
         let requiredHeight = Math.max(400, maxY - minY + 60, varsHeight + 60);
         
-        let offsetX = requiredWidth - 100;
+        let offsetX = requiredWidth - rightPadding + 50;
         let offsetY = (maxY === -Infinity) ? requiredHeight / 2 : -minY + Math.max(30, (requiredHeight - (maxY - minY)) / 2); 
         
         setPositions(ast, offsetX, offsetY);
@@ -571,7 +698,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         
         currentScale = 1.0;
         currentRenderState = {
-            ast, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight
+            ast, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight, equationStr
         };
         
         renderCircuit();
@@ -590,4 +717,8 @@ document.getElementById('generate-btn').addEventListener('click', () => {
 window.addEventListener('load', () => {
     document.getElementById('equation').value = 'A A\' + B';
     document.getElementById('generate-btn').click();
+    
+    document.getElementById('show-labels').addEventListener('change', () => {
+        if (currentRenderState) renderCircuit();
+    });
 });
