@@ -209,7 +209,9 @@ function renderWires(ctx) {
                 intersectX.push(v.x);
             }
         }
-        intersectX.sort((a, b) => a - b);
+        
+        // Remove duplicates to prevent drawing lines backwards across the hops
+        intersectX = [...new Set(intersectX)].sort((a, b) => a - b);
         
         let currX = h.x1;
         for (let ix of intersectX) {
