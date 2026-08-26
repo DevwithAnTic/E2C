@@ -351,9 +351,12 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
     // Capitalize first letter just to be safe, though the user example is mostly lowercase inside
     narrative = narrative.charAt(0).toUpperCase() + narrative.slice(1);
     
+    let uniqueVars = Array.from(variables).sort();
+    
     summaryContent.innerHTML = `
         <p style="margin-bottom: 1rem; line-height: 1.6; font-size: 14px;">${narrative}</p>
         <ul style="list-style-type: none; border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;">
+            <li style="margin-bottom: 5px;"><strong>Number of Inputs:</strong> ${uniqueVars.length} (${uniqueVars.join(', ') || 'None'})</li>
             <li><strong>Total Gates Used:</strong> ${gateCounts.AND + gateCounts.OR + gateCounts.NOT} 
             (AND: ${gateCounts.AND}, OR: ${gateCounts.OR}, NOT: ${gateCounts.NOT})</li>
         </ul>
