@@ -398,7 +398,7 @@ function renderCircuit() {
     drawWire(ctx, outPort.x, outPort.y, outPort.x + 40, outPort.y);
     ctx.font = 'bold 14px sans-serif';
     ctx.fillStyle = '#2c3e50';
-    ctx.fillText('OUT', outPort.x + 45, outPort.y + 5);
+    ctx.fillText('OUTPUT', outPort.x + 45, outPort.y + 5);
     
     drawAST(ctx, ast, varBusX);
 }
@@ -488,7 +488,7 @@ function generateTruthTable(ast, uniqueVars) {
     uniqueVars.forEach(v => {
         html += `<th>${v}</th>`;
     });
-    html += '<th class="out-col">OUT</th></tr></thead><tbody>';
+    html += '<th class="out-col">OUTPUT</th></tr></thead><tbody>';
     
     for (let i = 0; i < numRows; i++) {
         let assignments = {};
