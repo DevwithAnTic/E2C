@@ -296,3 +296,27 @@ table.truth-table tr:nth-child(even) td.out-col {
 .circuit-container::-webkit-scrollbar-track {
     background: #f0f0f0;
 }
+/* --- FOOTER STATUS BAR --- */
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #333333;
+    background-color: var(--bg-color);
+    border: 1px solid #000;
+    box-shadow: var(--inset-border);
+}
+
+.status-bar a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.status-bar a:hover {
+    text-decoration: underline;
+    color: var(--primary-hover);
+}
