@@ -1,5 +1,11 @@
 # E2C: Expression to Logic Circuit Converter
 
+![GitHub License](https://img.shields.io/github/license/DevwithAnTic/E2C?style=flat-square)
+![GitHub stars](https://img.shields.io/github/stars/DevwithAnTic/E2C?style=flat-square)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=flat-square&logo=css3&logoColor=white)
+
 E2C is a lightweight, zero-dependency web application that instantly parses boolean algebra expressions and visualizes them as logic gate circuits using HTML5 Canvas.
 
 It features an intelligent layout engine, standard logic gate symbols, truth table generation, and an interactive zoomable interface—all running locally in your browser.
