@@ -6,11 +6,11 @@ It features an intelligent layout engine, standard logic gate symbols, truth tab
 
 ## Features
 
-- **Instant Visualization:** Automatically routes and draws wires, gates, and connections without overlapping using a vertical shared input bus architecture.
-- **Truth Table Generation:** Dynamically generates a complete truth table for your circuit (up to 10 variables).
+- **Retro "Logisim" Aesthetic:** A hand-crafted, nostalgic UI inspired by classic Windows 95 and Java Swing applications. Features custom pixel-art icons, retro 3D borders, disabled font-smoothing, and classic native cursor SVGs!
+- **Instant Visualization:** Automatically routes and draws wires, gates, and intersections (with bridge hops) without overlapping, utilizing a smart orthogonal spacing algorithm and a shared input bus architecture.
+- **Truth Table Generation:** Dynamically generates a complete, color-striped truth table for your circuit (up to 10 variables).
 - **Narrative Summaries:** Generates a step-by-step plain English explanation of how your inputs are logically constructed to form the final output.
-- **Interactive Canvas:** Supports infinite vector-scaling! You can use your mouse wheel or touch-pinch gestures to zoom in and out of complex circuits without any pixelation.
-- **Developer-Friendly UI:** Clean, utilitarian interface optimized for both desktop and mobile devices.
+- **Interactive Canvas:** Features a dotted CAD-style grid, drag-to-pan functionality, and infinite vector-scaling! You can use your mouse wheel or touch-pinch gestures to freely explore complex circuits without pixelation.
 
 ## How to Use
 
