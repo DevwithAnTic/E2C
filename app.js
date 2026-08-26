@@ -342,7 +342,7 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
         traverse(node, true);
         
         let fullText = steps.join(" ");
-        fullText += ` after that we got the final result ${equationStr}`;
+        fullText += ` after that we got the final result ${equationStr}.`;
         return fullText;
     }
     
