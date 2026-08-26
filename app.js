@@ -165,6 +165,7 @@ function getInputPorts(node) {
 let verticalWires = [];
 let horizontalWires = [];
 let junctionDots = [];
+let busConnections = {};
 
 function addWireSegment(x1, y1, x2, y2) {
     if (x1 === x2) {
@@ -185,11 +186,28 @@ function drawVarWire(ctx, x1, y1, x2, y2, busX) {
     addWireSegment(x1, y1, busX, y1);
     addWireSegment(busX, y1, busX, y2);
     addWireSegment(busX, y2, x2, y2);
-    junctionDots.push({x: busX, y: y1}); // Dot where var enters the bus
-    junctionDots.push({x: busX, y: y2}); // Dot where wire leaves the bus to a gate
+    
+    if (!busConnections[busX]) busConnections[busX] = [];
+    busConnections[busX].push(y1);
+    busConnections[busX].push(y2);
 }
 
 function renderWires(ctx) {
+    junctionDots = [];
+    for (let bx in busConnections) {
+        let ys = busConnections[bx];
+        let yMin = Math.min(...ys);
+        let yMax = Math.max(...ys);
+        let uniqueYs = [...new Set(ys)];
+        for (let y of uniqueYs) {
+            // Only place dots at T-junctions (strictly between min and max)
+            // L-corners (the min and max themselves) do not get dots.
+            if (y > yMin && y < yMax) {
+                junctionDots.push({x: parseFloat(bx), y: y});
+            }
+        }
+    }
+
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 3;
     
@@ -495,6 +513,7 @@ function renderCircuit() {
     verticalWires = [];
     horizontalWires = [];
     junctionDots = [];
+    busConnections = {};
     
     let outPort = getOutputPort(ast);
     addWireSegment(outPort.x, outPort.y, outPort.x + 30, outPort.y);
