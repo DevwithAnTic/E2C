@@ -1,3 +1,11 @@
+/**
+ * E2C Stylesheet
+ * Author: DevwithAnTic
+ * 
+ * Note: Going for a full retro Windows 95 / Java Swing vibe here.
+ * Pixelated cursors and harsh inset borders are fully intentional! 
+ */
+
 :root {
     --bg-color: #e0e0e0;
     --card-bg: #f0f0f0;
@@ -6,16 +14,20 @@
     --border: #a0a0a0;
     --primary: #0000aa;
     --primary-hover: #0000ff;
+    
+    /* classic 3D borders */
     --inset-border: inset 2px 2px 0px #808080, inset -2px -2px 0px #ffffff;
     --outset-border: inset 2px 2px 0px #ffffff, inset -2px -2px 0px #808080;
 }
 
+/* reset everything */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
+/* proper retro text selection highlight */
 ::selection {
     background-color: #0000aa;
     color: #ffffff;

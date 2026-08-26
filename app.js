@@ -1,3 +1,14 @@
+/**
+ * E2C: Expression to Logic Circuit Converter
+ * Author: DevwithAnTic
+ * 
+ * NOTE: This handles all the custom AST parsing and canvas rendering.
+ * No external diagramming libraries used, it's all raw canvas paths.
+ * 
+ * TODO: Add support for XOR/XNOR gates eventually?
+ */
+
+// Basic lexer to strip whitespace and categorize chars
 const tokenize = (expr) => {
     const tokens = [];
     let i = 0;
@@ -39,6 +50,7 @@ class Parser {
         if (this.pos < this.tokens.length) {
             throw new Error("Unexpected token at end. Check parentheses and operators.");
         }
+        // console.log("Generated AST:", ast); // left for debugging
         return ast;
     }
 
@@ -96,15 +108,20 @@ class Parser {
     }
 }
 
+// Recursively calculate the required height for the bounding boxes.
+// A gap of 30px is exactly the sweet spot to ensure horizontal wires
+// (which enter gates at y±12) never intersect the bounding boxes of subtrees.
 function computeHeights(astNode) {
     if (astNode.type === 'VAR') {
-        astNode.h = 30;
+        astNode.h = 30; // base height for variables
     } else if (astNode.type === 'NOT') {
         computeHeights(astNode.operand);
         astNode.h = Math.max(50, astNode.operand.h);
     } else {
         computeHeights(astNode.left);
         computeHeights(astNode.right);
+        
+        // 30px routing channel so wires don't slice through the gates
         astNode.h = astNode.left.h + astNode.right.h + 30;
     }
     return astNode.h;
@@ -224,6 +241,7 @@ function drawGate(ctx, type, x, y, label) {
     
     ctx.beginPath();
     if (type === 'AND') {
+        // drawing a perfect D-shape for the AND gate manually
         ctx.moveTo(x, y - 25);
         ctx.lineTo(x + 25, y - 25);
         ctx.arc(x + 25, y, 25, -Math.PI/2, Math.PI/2);
@@ -240,6 +258,7 @@ function drawGate(ctx, type, x, y, label) {
             ctx.textAlign = 'left';
         }
     } else if (type === 'OR') {
+        // shield shape using quadratic curves, took a while to get the points right haha
         ctx.moveTo(x, y - 25);
         ctx.quadraticCurveTo(x + 30, y - 25, x + 50, y);
         ctx.quadraticCurveTo(x + 30, y + 25, x, y + 25);
