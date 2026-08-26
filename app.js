@@ -185,7 +185,8 @@ function drawVarWire(ctx, x1, y1, x2, y2, busX) {
     addWireSegment(x1, y1, busX, y1);
     addWireSegment(busX, y1, busX, y2);
     addWireSegment(busX, y2, x2, y2);
-    junctionDots.push({x: busX, y: y1});
+    junctionDots.push({x: busX, y: y1}); // Dot where var enters the bus
+    junctionDots.push({x: busX, y: y2}); // Dot where wire leaves the bus to a gate
 }
 
 function renderWires(ctx) {
