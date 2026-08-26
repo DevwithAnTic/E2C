@@ -299,8 +299,8 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
                     return { text: inner.text + "'", isGate: false };
                 }
                 
-                let prefix = steps.length === 0 ? "It is a combinational circuit where" : (isTopNode ? "finally" : "after that");
-                steps.push(`${prefix} ${inner.text} is associated with one not gate`);
+                let prefix = steps.length === 0 ? "It is a combinational circuit where" : (isTopNode ? "Finally," : "After that,");
+                steps.push(`${prefix} ${inner.text} is associated with one not gate.`);
                 return { text: `the not gate`, isGate: true };
             }
             
@@ -317,20 +317,26 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
                 collect(n);
                 
                 let opNames = operands.map(o => o.text);
-                let subject = opNames.join(',');
+                let subject = "";
                 
-                if (operands.every(o => o.isGate) && opNames.length === 2) {
-                    subject = opNames[0] + " and " + opNames[1].replace("the ", "");
-                } else if (operands.some(o => o.isGate)) {
-                    subject = opNames.join(' and ');
+                if (opNames.length === 1) {
+                    subject = opNames[0];
+                } else if (opNames.length === 2) {
+                    if (operands.every(o => o.isGate)) {
+                        subject = opNames[0] + " and " + opNames[1].replace("the ", "");
+                    } else {
+                        subject = opNames.join(' and ');
+                    }
+                } else {
+                    subject = opNames.slice(0, -1).join(', ') + ", and " + opNames[opNames.length - 1];
                 }
                 
                 let gateType = n.type.toLowerCase();
-                let prefix = steps.length === 0 ? "It is a combinational circuit where" : (isTopNode ? "finally" : "after that");
+                let prefix = steps.length === 0 ? "It is a combinational circuit where" : (isTopNode ? "Finally," : "After that,");
                 
                 let verbPhrase = (operands.length === 2 && operands.every(o => o.isGate)) ? "they both are associated" : "are associated";
                 
-                steps.push(`${prefix} ${subject} ${verbPhrase} with one ${gateType} gate`);
+                steps.push(`${prefix} ${subject} ${verbPhrase} with one ${gateType} gate.`);
                 return { text: `the ${gateType} gate`, isGate: true };
             }
         }
@@ -342,7 +348,7 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
         traverse(node, true);
         
         let fullText = steps.join(" ");
-        fullText += ` after that we got the final result ${equationStr}.`;
+        fullText += ` Thus, we get the final result ${equationStr}.`;
         return fullText;
     }
     
