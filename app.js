@@ -511,7 +511,7 @@ let currentScale = 1.0;
 
 function renderCircuit() {
     if (!currentRenderState) return;
-    const {ast, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight, equationStr} = currentRenderState;
+    const {trees, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight, equationStr} = currentRenderState;
     
     let canvas = document.getElementById('circuit-canvas');
     let ctx = canvas.getContext('2d');
@@ -527,18 +527,26 @@ function renderCircuit() {
     junctionDots = [];
     busConnections = {};
     
-    let outPort = getOutputPort(ast);
+    let mainTree = trees[trees.length - 1];
+    let outPort = getOutputPort(mainTree.ast);
     addWireSegment(outPort.x, outPort.y, outPort.x + 30, outPort.y);
     
-    drawAST(ctx, ast, varBusX);
-    
+    trees.forEach(t => drawAST(ctx, t.ast, varBusX));
     renderWires(ctx);
     
     uniqueVars.forEach(v => {
         drawGate(ctx, 'VAR', varMap[v].x, varMap[v].y, v);
     });
     
-    drawAllGates(ctx, ast);
+    // Draw all gates for all trees, including the shared subexpressions which act as VARs
+    trees.forEach(t => {
+        if (t.name !== 'MAIN') {
+            // Shared subexpression 'variable' box
+            let outP = getOutputPort(t.ast);
+            drawGate(ctx, 'VAR', outP.x - 20, outP.y, t.name);
+        }
+        drawAllGates(ctx, t.ast);
+    });
     
     ctx.beginPath();
     ctx.arc(outPort.x + 38, outPort.y, 8, 0, 2 * Math.PI);
@@ -704,61 +712,150 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         const parser = new Parser(tokens);
         const ast = parser.parse();
         
-        const { gateCounts, variables } = analyzeAST(ast);
+        const { variables } = analyzeAST(ast);
         let uniqueVars = Array.from(variables).sort();
         
-        computeHeights(ast);
+        let optimize = document.getElementById('optimize-btn') && document.getElementById('optimize-btn').checked;
+        let trees = [];
+        let sharedVarMap = {};
         
-        setPositions(ast, 0, 0); 
-        
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxY = -Infinity;
-        
-        function findBounds(node) {
-            if (node.type !== 'VAR') {
-                minX = Math.min(minX, node.x);
-                minY = Math.min(minY, node.y - 30);
-                maxY = Math.max(maxY, node.y + 30);
+        if (optimize) {
+            let hashCounts = {};
+            let hashNodes = {};
+            
+            function computeHashes(node) {
+                if (!node) return '';
+                if (node.type === 'VAR') {
+                    node.hash = node.value;
+                    return node.hash;
+                }
+                if (node.type === 'NOT') {
+                    node.hash = 'NOT(' + computeHashes(node.operand) + ')';
+                    return node.hash;
+                }
+                let h1 = computeHashes(node.left);
+                let h2 = computeHashes(node.right);
+                if (h1 > h2) { let t = h1; h1 = h2; h2 = t; }
+                node.hash = node.type + '(' + h1 + ',' + h2 + ')';
+                return node.hash;
             }
-            if (node.left) findBounds(node.left);
-            if (node.right) findBounds(node.right);
-            if (node.operand) findBounds(node.operand);
+            computeHashes(ast);
+            
+            function countHashes(node) {
+                if (!node) return;
+                if (node.type !== 'VAR') {
+                    hashCounts[node.hash] = (hashCounts[node.hash] || 0) + 1;
+                    hashNodes[node.hash] = node;
+                    if (node.type === 'NOT') countHashes(node.operand);
+                    else { countHashes(node.left); countHashes(node.right); }
+                }
+            }
+            countHashes(ast);
+            
+            let sharedHashes = Object.keys(hashCounts).filter(h => hashCounts[h] > 1);
+            sharedHashes.sort((a, b) => a.length - b.length);
+            
+            sharedHashes.forEach((h, i) => {
+                sharedVarMap[h] = 'S' + (i + 1);
+            });
+            
+            function copyAndReplace(node, isRootOfShared = false) {
+                if (!node) return null;
+                if (node.type === 'VAR') return { type: 'VAR', value: node.value, hash: node.hash };
+                if (hashCounts[node.hash] > 1 && !isRootOfShared) {
+                    return { type: 'VAR', value: sharedVarMap[node.hash], isShared: true };
+                }
+                if (node.type === 'NOT') return { type: 'NOT', operand: copyAndReplace(node.operand), hash: node.hash };
+                return { type: node.type, left: copyAndReplace(node.left), right: copyAndReplace(node.right), hash: node.hash };
+            }
+            
+            sharedHashes.forEach(h => {
+                trees.push({ name: sharedVarMap[h], ast: copyAndReplace(hashNodes[h], true) });
+            });
+            trees.push({ name: 'MAIN', ast: copyAndReplace(ast, true) });
+        } else {
+            trees.push({ name: 'MAIN', ast: ast });
         }
-        findBounds(ast);
         
-        let varsWidth = 50 + uniqueVars.length * 15 + 40; 
-        let equationTextWidth = equationStr.length * 12;
-        let rightPadding = Math.max(200, equationTextWidth + 100);
-        let requiredWidth = Math.max(800, -minX + varsWidth + rightPadding + 50); // Added 50px safety margin for snap rounding
+        let finalGateCounts = { AND: 0, OR: 0, NOT: 0 };
+        function countFinalGates(node) {
+            if (!node) return;
+            if (node.type === 'AND' || node.type === 'OR' || node.type === 'NOT') {
+                finalGateCounts[node.type]++;
+            }
+            if (node.left) countFinalGates(node.left);
+            if (node.right) countFinalGates(node.right);
+            if (node.operand) countFinalGates(node.operand);
+        }
+        trees.forEach(t => countFinalGates(t.ast));
+        
+        let totalTreesHeight = 0;
+        trees.forEach(t => {
+            computeHeights(t.ast);
+            totalTreesHeight += t.ast.h + 60;
+        });
+        
         let varsHeight = uniqueVars.length * 60;
-        let requiredHeight = Math.max(400, (maxY - minY) + varsHeight + 120);
-        
-        let maxBusX = 90 + (uniqueVars.length - 1) * 15;
-        let minOffsetX = maxBusX + 60 - minX;
-        
-        let baseOffsetX = Math.max(requiredWidth - rightPadding + 50, minOffsetX);
-        let offsetX = Math.ceil(baseOffsetX / 15) * 15; // Snap to 15px grid to ensure midX lines don't collide
-        
-        let offsetY = (maxY === -Infinity) ? requiredHeight / 2 : Math.round((-minY + varsHeight + 60) / 15) * 15;
-        
-        setPositions(ast, offsetX, offsetY);
+        let requiredHeight = Math.max(400, totalTreesHeight + varsHeight + 120);
         
         let varMap = {};
         let varBusX = {};
-        // Shift variables safely above the gate tree
         let varStartY = Math.round(30 / 15) * 15;
+        
         uniqueVars.forEach((v, index) => {
             varMap[v] = { x: 50, y: varStartY + index * 60 };
             varBusX[v] = 90 + index * 15;
         });
         
-        injectVarPositions(ast, varMap);
+        let currentY = varStartY + varsHeight + 30;
+        currentY = Math.ceil(currentY / 15) * 15;
+        
+        let currentX = 90 + uniqueVars.length * 15 + 45;
+        currentX = Math.ceil(currentX / 15) * 15;
+        
+        trees.forEach(t => {
+            setPositions(t.ast, 0, 0); 
+            
+            let treeMinX = float_inf = 9999999;
+            function getMinX(node) {
+                if (node.type !== 'VAR') {
+                    if (node.x < treeMinX) treeMinX = node.x;
+                    if (node.left) getMinX(node.left);
+                    if (node.right) getMinX(node.right);
+                    if (node.operand) getMinX(node.operand);
+                }
+            }
+            getMinX(t.ast);
+            if (treeMinX === float_inf) treeMinX = 0;
+            
+            let minOffsetX = currentX + 60 - treeMinX;
+            let offsetX = Math.ceil(minOffsetX / 15) * 15;
+            let offsetY = currentY + t.ast.h / 2;
+            offsetY = Math.round(offsetY / 15) * 15;
+            
+            setPositions(t.ast, offsetX, offsetY);
+            
+            if (t.name !== 'MAIN') {
+                let outPort = getOutputPort(t.ast);
+                varMap[t.name] = { x: outPort.x - 20, y: outPort.y };
+                varBusX[t.name] = outPort.x + 45;
+                currentX = varBusX[t.name] + 15;
+            }
+            
+            currentY += t.ast.h + 60;
+            currentY = Math.ceil(currentY / 15) * 15;
+        });
+        
+        trees.forEach(t => injectVarPositions(t.ast, varMap));
+        
+        let equationTextWidth = equationStr.length * 12;
+        let rightPadding = Math.max(200, equationTextWidth + 100);
+        let mainOutPort = getOutputPort(trees[trees.length - 1].ast);
+        let requiredWidth = Math.max(800, mainOutPort.x + rightPadding + 50);
         
         let container = document.querySelector('.circuit-container');
         let canvas = document.getElementById('circuit-canvas');
         
-        // Hide canvas temporarily so the container shrinks to its true CSS layout size instead of stretching to fit the old canvas
         canvas.style.display = 'none';
         let cw = container.clientWidth;
         let ch = container.clientHeight;
@@ -766,23 +863,21 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         
         let scaleX = cw / requiredWidth;
         let scaleY = ch / requiredHeight;
-        let fitScale = Math.min(scaleX, scaleY) * 0.95; // 5% padding to keep off edges
+        let fitScale = Math.min(scaleX, scaleY) * 0.95;
         
-        // Cap scale to 1.0 so small circuits aren't blown up, but allow shrinking to fit large circuits
         currentScale = Math.min(1.0, fitScale);
-        currentScale = Math.max(0.2, currentScale); // respect minimum zoom
+        currentScale = Math.max(0.2, currentScale);
         
-        // Reset scroll position
         container.scrollLeft = 0;
         container.scrollTop = 0;
         
         currentRenderState = {
-            ast, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight, equationStr
+            trees, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight, equationStr
         };
         
         renderCircuit();
         
-        updateSummary(gateCounts, variables, ast, equationStr);
+        updateSummary(finalGateCounts, uniqueVars, equationStr);
         generateTruthTable(ast, uniqueVars);
         document.getElementById('error-msg').style.display = 'none';
         
