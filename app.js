@@ -161,8 +161,8 @@ function getInputPorts(node) {
     if (node.type === 'AND' || node.type === 'OR') {
         let ports = [];
         let num = node.inputs.length;
-        let gap = 40 / Math.max(1, num - 1);
-        let startY = node.y - 20;
+        let gap = 45 / Math.max(1, num - 1);
+        let startY = node.y - 22.5;
         for (let i = 0; i < num; i++) {
             let py = num === 1 ? node.y : startY + i * gap;
             let px = node.x;
@@ -540,13 +540,8 @@ function renderCircuit() {
         drawGate(ctx, 'VAR', varMap[v].x, varMap[v].y, v);
     });
     
-    // Draw all gates for all trees, including the shared subexpressions which act as VARs
+    // Draw all gates for all trees
     trees.forEach(t => {
-        if (t.name !== 'MAIN') {
-            // Shared subexpression 'variable' box
-            let outP = getOutputPort(t.ast);
-            drawGate(ctx, 'VAR', outP.x - 20, outP.y, t.name);
-        }
         drawAllGates(ctx, t.ast);
     });
     

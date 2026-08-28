@@ -14,6 +14,9 @@ E2C is a client-side web application that converts boolean expressions into inte
 - **Custom Layout Engine:** Automatically routes gates and wires using an orthogonal spacing algorithm. It visually bridges overlapping wires to keep the circuit readable.
 - **Truth Table Generation:** Dynamically computes a complete truth table for your circuit (supports up to 10 variables).
 - **Logic Summary:** Provides a step-by-step text breakdown of how the inputs are logically constructed to form the final output.
+- **Multi-Input Gates (N-ary):** Automatically flattens cascaded operations (e.g., A + B + C) into a single multi-input logic gate, dynamically spacing the input pins along the gate's edge.
+- **Common Subexpression Elimination (CSE):** The "Optimize Gates" toggle detects duplicated logic blocks (e.g., (A+B)(A+B)), extracts them into shared sub-circuits, and routes their output to multiple destinations, significantly reducing total gate count.
+- **Persistent UI Preferences:** Checkbox states for features and layout options are saved in your browser's local storage and persist across sessions.
 - **Interactive Canvas:** Supports zooming with the mouse wheel and panning via click and drag, making it easy to navigate large circuits.
 
 ## Usage
