@@ -324,7 +324,7 @@ function drawGate(ctx, type, x, y, label) {
         }
     } else if (type === 'VAR') {
         ctx.beginPath();
-        ctx.arc(x + 20, y, 5, 0, 2 * Math.PI); // Input point dot
+        ctx.rect(x + 15, y - 5, 10, 10); // Square input point
         ctx.fillStyle = '#000000';
         ctx.fill();
         
