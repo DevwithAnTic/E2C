@@ -324,7 +324,7 @@ function drawGate(ctx, type, x, y, label) {
         }
     } else if (type === 'VAR') {
         ctx.beginPath();
-        ctx.rect(x - 4, y - 12, 24, 24); // Hollow square the size of the output pin
+        ctx.rect(x + 4, y - 8, 16, 16); // 16x16 hollow square
         ctx.fillStyle = '#ffffff';
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#000000';
@@ -334,7 +334,7 @@ function drawGate(ctx, type, x, y, label) {
         ctx.font = 'bold 16px "Courier New", monospace';
         ctx.fillStyle = '#000000';
         ctx.textAlign = 'right';
-        ctx.fillText(label, x - 12, y + 5); // Label right-aligned beside the box
+        ctx.fillText(label, x - 4, y + 5); // Label right-aligned beside the box
         ctx.textAlign = 'left';
     }
 }
@@ -536,7 +536,7 @@ function renderCircuit() {
     drawAllGates(ctx, ast);
     
     ctx.beginPath();
-    ctx.arc(outPort.x + 42, outPort.y, 12, 0, 2 * Math.PI);
+    ctx.arc(outPort.x + 38, outPort.y, 8, 0, 2 * Math.PI);
     ctx.fillStyle = '#ffffff';
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#000000';
@@ -545,7 +545,7 @@ function renderCircuit() {
     
     ctx.font = 'bold 16px "Courier New", monospace';
     ctx.fillStyle = '#000000';
-    ctx.fillText(equationStr, outPort.x + 60, outPort.y + 5);
+    ctx.fillText(equationStr, outPort.x + 52, outPort.y + 5);
 }
 
 document.getElementById('circuit-canvas').addEventListener('wheel', (e) => {
