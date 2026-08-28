@@ -94,6 +94,7 @@ class Parser {
             if (this.pos >= this.tokens.length || this.tokens[this.pos].type !== 'RPAREN') {
                 throw new Error("Expected closing parenthesis ')'");
             }
+            if (node) node.inParens = true;
             this.pos++;
         } else {
             throw new Error(`Unexpected token: ${token.value}`);
@@ -722,12 +723,12 @@ document.getElementById('generate-btn').addEventListener('click', () => {
             let right = flattenAST(n.right);
             let inputs = [];
             
-            if (multiInput && left.type === n.type && !left.isShared) {
+            if (multiInput && left.type === n.type && !left.isShared && !left.inParens) {
                 inputs.push(...left.inputs);
             } else {
                 inputs.push(left);
             }
-            if (multiInput && right.type === n.type && !right.isShared) {
+            if (multiInput && right.type === n.type && !right.isShared && !right.inParens) {
                 inputs.push(...right.inputs);
             } else {
                 inputs.push(right);
@@ -789,7 +790,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
                     return { type: 'VAR', value: sharedVarMap[node.hash], isShared: true };
                 }
                 if (node.type === 'NOT') return { type: 'NOT', operand: copyAndReplace(node.operand), hash: node.hash };
-                return { type: node.type, inputs: node.inputs.map(i => copyAndReplace(i, false)), hash: node.hash };
+                return { type: node.type, inputs: node.inputs.map(i => copyAndReplace(i, false)), hash: node.hash, inParens: node.inParens };
             }
             
             sharedHashes.forEach(h => {
