@@ -746,7 +746,19 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         
         injectVarPositions(ast, varMap);
         
-        currentScale = 1.0;
+        let container = document.querySelector('.circuit-container');
+        let scaleX = container.clientWidth / requiredWidth;
+        let scaleY = container.clientHeight / requiredHeight;
+        let fitScale = Math.min(scaleX, scaleY) * 0.95; // 5% padding to keep off edges
+        
+        // Cap scale to 1.0 so small circuits aren't blown up, but allow shrinking to fit large circuits
+        currentScale = Math.min(1.0, fitScale);
+        currentScale = Math.max(0.2, currentScale); // respect minimum zoom
+        
+        // Reset scroll position
+        container.scrollLeft = 0;
+        container.scrollTop = 0;
+        
         currentRenderState = {
             ast, uniqueVars, varMap, varBusX, requiredWidth, requiredHeight, equationStr
         };
