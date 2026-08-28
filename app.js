@@ -480,12 +480,17 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
     
     let uniqueVars = Array.from(variables).sort();
     
+    let gateDetails = [];
+    if (gateCounts.AND > 0) gateDetails.push(`AND: ${gateCounts.AND}`);
+    if (gateCounts.OR > 0) gateDetails.push(`OR: ${gateCounts.OR}`);
+    if (gateCounts.NOT > 0) gateDetails.push(`NOT: ${gateCounts.NOT}`);
+    let gateDetailsStr = gateDetails.length > 0 ? ` (${gateDetails.join(', ')})` : '';
+    
     summaryContent.innerHTML = `
         <p style="margin-bottom: 1rem; line-height: 1.6;">${narrative}</p>
         <ul style="list-style-type: none; border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px;">
             <li style="margin-bottom: 5px;"><strong>Number of Inputs:</strong> ${uniqueVars.length} (${uniqueVars.join(', ') || 'None'})</li>
-            <li><strong>Total Gates Used:</strong> ${gateCounts.AND + gateCounts.OR + gateCounts.NOT} 
-            (AND: ${gateCounts.AND}, OR: ${gateCounts.OR}, NOT: ${gateCounts.NOT})</li>
+            <li><strong>Total Gates Used:</strong> ${gateCounts.AND + gateCounts.OR + gateCounts.NOT}${gateDetailsStr}</li>
         </ul>
     `;
 }
