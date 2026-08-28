@@ -727,7 +727,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         let rightPadding = Math.max(200, equationTextWidth + 100);
         let requiredWidth = Math.max(800, -minX + varsWidth + rightPadding + 50); // Added 50px safety margin for snap rounding
         let varsHeight = uniqueVars.length * 60;
-        let requiredHeight = Math.max(400, maxY - minY + 60, varsHeight + 60);
+        let requiredHeight = Math.max(400, (maxY - minY) + varsHeight + 120);
         
         let maxBusX = 90 + (uniqueVars.length - 1) * 15;
         let minOffsetX = maxBusX + 60 - minX;
@@ -735,13 +735,14 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         let baseOffsetX = Math.max(requiredWidth - rightPadding + 50, minOffsetX);
         let offsetX = Math.ceil(baseOffsetX / 15) * 15; // Snap to 15px grid to ensure midX lines don't collide
         
-        let offsetY = Math.round(((maxY === -Infinity) ? requiredHeight / 2 : -minY + Math.max(30, (requiredHeight - (maxY - minY)) / 2)) / 15) * 15; 
+        let offsetY = (maxY === -Infinity) ? requiredHeight / 2 : Math.round((-minY + varsHeight + 60) / 15) * 15;
         
         setPositions(ast, offsetX, offsetY);
         
         let varMap = {};
         let varBusX = {};
-        let varStartY = Math.round(((requiredHeight - varsHeight) / 2 + 30) / 15) * 15;
+        // Shift variables safely above the gate tree
+        let varStartY = Math.round(30 / 15) * 15;
         uniqueVars.forEach((v, index) => {
             varMap[v] = { x: 50, y: varStartY + index * 60 };
             varBusX[v] = 90 + index * 15;
