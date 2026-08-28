@@ -792,7 +792,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         let totalTreesHeight = 0;
         trees.forEach(t => {
             computeHeights(t.ast);
-            totalTreesHeight += t.ast.h + 60;
+            totalTreesHeight += t.ast.h + 30;
         });
         
         let varsHeight = uniqueVars.length * 60;
@@ -810,7 +810,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         let currentY = varStartY + varsHeight + 30;
         currentY = Math.ceil(currentY / 15) * 15;
         
-        let currentX = 90 + uniqueVars.length * 15 + 45;
+        let currentX = 90 + uniqueVars.length * 15 + 20;
         currentX = Math.ceil(currentX / 15) * 15;
         
         trees.forEach(t => {
@@ -828,7 +828,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
             getMinX(t.ast);
             if (treeMinX === float_inf) treeMinX = 0;
             
-            let minOffsetX = currentX + 60 - treeMinX;
+            let minOffsetX = currentX + 30 - treeMinX;
             let offsetX = Math.ceil(minOffsetX / 15) * 15;
             let offsetY = currentY + t.ast.h / 2;
             offsetY = Math.round(offsetY / 15) * 15;
@@ -838,11 +838,11 @@ document.getElementById('generate-btn').addEventListener('click', () => {
             if (t.name !== 'MAIN') {
                 let outPort = getOutputPort(t.ast);
                 varMap[t.name] = { x: outPort.x - 20, y: outPort.y };
-                varBusX[t.name] = outPort.x + 45;
+                varBusX[t.name] = outPort.x + 20;
                 currentX = varBusX[t.name] + 15;
             }
             
-            currentY += t.ast.h + 60;
+            currentY += t.ast.h + 30;
             currentY = Math.ceil(currentY / 15) * 15;
         });
         
