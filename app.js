@@ -733,7 +733,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
             } else {
                 inputs.push(right);
             }
-            return { type: n.type, inputs: inputs };
+            return { type: n.type, inputs: inputs, inParens: n.inParens };
         }
         ast = flattenAST(ast);
 
