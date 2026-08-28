@@ -118,11 +118,9 @@ function computeHeights(astNode) {
         computeHeights(astNode.operand);
         astNode.h = Math.max(60, astNode.operand.h);
     } else {
-        computeHeights(astNode.left);
-        computeHeights(astNode.right);
-        
-        // 30px routing channel so wires don't slice through the gates
-        astNode.h = astNode.left.h + astNode.right.h + 30;
+        let h = 0;
+        astNode.inputs.forEach(i => { computeHeights(i); h += i.h; });
+        astNode.h = h + (astNode.inputs.length - 1) * 15 + 15;
     }
     return astNode.h;
 }
@@ -142,11 +140,12 @@ function setPositions(astNode, xRight, yCenter) {
     if (astNode.type === 'NOT') {
         setPositions(astNode.operand, childXRight, yCenter); 
     } else {
-        let leftY = yCenter - 15 - astNode.left.h / 2;
-        let rightY = yCenter + 15 + astNode.right.h / 2;
-        
-        setPositions(astNode.left, childXRight, leftY);
-        setPositions(astNode.right, childXRight, rightY);
+        let currentY = yCenter - astNode.h / 2;
+        astNode.inputs.forEach(i => {
+            let childY = currentY + i.h / 2 + 7.5;
+            setPositions(i, childXRight, childY);
+            currentY += i.h + 15;
+        });
     }
 }
 
@@ -158,8 +157,22 @@ function getOutputPort(node) {
 }
 
 function getInputPorts(node) {
-    if (node.type === 'AND') return [{x: node.x, y: node.y - 12}, {x: node.x, y: node.y + 12}];
-    if (node.type === 'OR') return [{x: node.x + 6, y: node.y - 12}, {x: node.x + 6, y: node.y + 12}];
+    if (node.type === 'AND' || node.type === 'OR') {
+        let ports = [];
+        let num = node.inputs.length;
+        let gap = 40 / Math.max(1, num - 1);
+        let startY = node.y - 20;
+        for (let i = 0; i < num; i++) {
+            let py = num === 1 ? node.y : startY + i * gap;
+            let px = node.x;
+            if (node.type === 'OR') {
+                let dy = py - node.y;
+                px = node.x + 15 * (1 - Math.pow(dy / 25, 2));
+            }
+            ports.push({x: px, y: py});
+        }
+        return ports;
+    }
     if (node.type === 'NOT') return [{x: node.x, y: node.y}];
     return [];
 }
@@ -353,31 +366,22 @@ function drawAST(ctx, node, varBusX) {
         drawAST(ctx, node.operand, varBusX);
     } else if (node.type === 'AND' || node.type === 'OR') {
         let ports = getInputPorts(node);
-        
-        let leftOut = getOutputPort(node.left);
-        if (node.left.type === 'VAR') {
-            drawVarWire(ctx, leftOut.x, leftOut.y, ports[0].x, ports[0].y, varBusX[node.left.value]);
-        } else {
-            drawWire(ctx, leftOut.x, leftOut.y, ports[0].x, ports[0].y);
-        }
-        
-        let rightOut = getOutputPort(node.right);
-        if (node.right.type === 'VAR') {
-            drawVarWire(ctx, rightOut.x, rightOut.y, ports[1].x, ports[1].y, varBusX[node.right.value]);
-        } else {
-            drawWire(ctx, rightOut.x, rightOut.y, ports[1].x, ports[1].y);
-        }
-        
-        drawAST(ctx, node.left, varBusX);
-        drawAST(ctx, node.right, varBusX);
+        node.inputs.forEach((child, idx) => {
+            let outP = getOutputPort(child);
+            if (child.type === 'VAR') {
+                drawVarWire(ctx, outP.x, outP.y, ports[idx].x, ports[idx].y, varBusX[child.value]);
+            } else {
+                drawWire(ctx, outP.x, outP.y, ports[idx].x, ports[idx].y);
+            }
+            drawAST(ctx, child, varBusX);
+        });
     }
 }
 
 function drawAllGates(ctx, node) {
     if (node.type !== 'VAR') {
         drawGate(ctx, node.type, node.x, node.y, node.value);
-        if (node.left) drawAllGates(ctx, node.left);
-        if (node.right) drawAllGates(ctx, node.right);
+        if (node.inputs) node.inputs.forEach(i => drawAllGates(ctx, i));
         if (node.operand) drawAllGates(ctx, node.operand);
     }
 }
@@ -393,8 +397,7 @@ function analyzeAST(ast) {
             if (node.type === 'OR') gateCounts.OR++;
             if (node.type === 'NOT') gateCounts.NOT++;
             
-            if (node.left) traverse(node.left);
-            if (node.right) traverse(node.right);
+            if (node.inputs) node.inputs.forEach(traverse);
             if (node.operand) traverse(node.operand);
         }
     }
@@ -429,8 +432,7 @@ function updateSummary(gateCounts, variables, ast, equationStr) {
                 let operands = [];
                 function collect(curr) {
                     if (curr.type === n.type) {
-                        collect(curr.left);
-                        collect(curr.right);
+                        if (curr.inputs) curr.inputs.forEach(collect);
                     } else {
                         operands.push(traverse(curr, false));
                     }
@@ -500,8 +502,7 @@ function injectVarPositions(node, varMap) {
         node.x = varMap[node.value].x;
         node.y = varMap[node.value].y;
     } else {
-        if (node.left) injectVarPositions(node.left, varMap);
-        if (node.right) injectVarPositions(node.right, varMap);
+        if (node.inputs) node.inputs.forEach(i => injectVarPositions(i, varMap));
         if (node.operand) injectVarPositions(node.operand, varMap);
     }
 }
@@ -653,10 +654,10 @@ function evaluateAST(node, assignments) {
         return !evaluateAST(node.operand, assignments);
     }
     if (node.type === 'AND') {
-        return evaluateAST(node.left, assignments) && evaluateAST(node.right, assignments);
+        return node.inputs.every(i => evaluateAST(i, assignments));
     }
     if (node.type === 'OR') {
-        return evaluateAST(node.left, assignments) || evaluateAST(node.right, assignments);
+        return node.inputs.some(i => evaluateAST(i, assignments));
     }
     return false;
 }
@@ -710,8 +711,31 @@ document.getElementById('generate-btn').addEventListener('click', () => {
     try {
         const tokens = tokenize(equationStr);
         const parser = new Parser(tokens);
-        const ast = parser.parse();
-        
+        let ast = parser.parse();
+        let multiInput = document.getElementById('multi-input-btn') && document.getElementById('multi-input-btn').checked;
+        function flattenAST(n) {
+            if (!n) return null;
+            if (n.type === 'VAR') return { type: 'VAR', value: n.value };
+            if (n.type === 'NOT') return { type: 'NOT', operand: flattenAST(n.operand) };
+            
+            let left = flattenAST(n.left);
+            let right = flattenAST(n.right);
+            let inputs = [];
+            
+            if (multiInput && left.type === n.type && !left.isShared) {
+                inputs.push(...left.inputs);
+            } else {
+                inputs.push(left);
+            }
+            if (multiInput && right.type === n.type && !right.isShared) {
+                inputs.push(...right.inputs);
+            } else {
+                inputs.push(right);
+            }
+            return { type: n.type, inputs: inputs };
+        }
+        ast = flattenAST(ast);
+
         const { variables } = analyzeAST(ast);
         let uniqueVars = Array.from(variables).sort();
         
@@ -733,10 +757,9 @@ document.getElementById('generate-btn').addEventListener('click', () => {
                     node.hash = 'NOT(' + computeHashes(node.operand) + ')';
                     return node.hash;
                 }
-                let h1 = computeHashes(node.left);
-                let h2 = computeHashes(node.right);
-                if (h1 > h2) { let t = h1; h1 = h2; h2 = t; }
-                node.hash = node.type + '(' + h1 + ',' + h2 + ')';
+                let hashes = node.inputs.map(computeHashes);
+                hashes.sort();
+                node.hash = node.type + '(' + hashes.join(',') + ')';
                 return node.hash;
             }
             computeHashes(ast);
@@ -747,7 +770,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
                     hashCounts[node.hash] = (hashCounts[node.hash] || 0) + 1;
                     hashNodes[node.hash] = node;
                     if (node.type === 'NOT') countHashes(node.operand);
-                    else { countHashes(node.left); countHashes(node.right); }
+                    else if (node.inputs) node.inputs.forEach(countHashes);
                 }
             }
             countHashes(ast);
@@ -766,7 +789,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
                     return { type: 'VAR', value: sharedVarMap[node.hash], isShared: true };
                 }
                 if (node.type === 'NOT') return { type: 'NOT', operand: copyAndReplace(node.operand), hash: node.hash };
-                return { type: node.type, left: copyAndReplace(node.left), right: copyAndReplace(node.right), hash: node.hash };
+                return { type: node.type, inputs: node.inputs.map(i => copyAndReplace(i, false)), hash: node.hash };
             }
             
             sharedHashes.forEach(h => {
@@ -783,8 +806,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
             if (node.type === 'AND' || node.type === 'OR' || node.type === 'NOT') {
                 finalGateCounts[node.type]++;
             }
-            if (node.left) countFinalGates(node.left);
-            if (node.right) countFinalGates(node.right);
+            if (node.inputs) node.inputs.forEach(countFinalGates);
             if (node.operand) countFinalGates(node.operand);
         }
         trees.forEach(t => countFinalGates(t.ast));
@@ -820,8 +842,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
             function getMinX(node) {
                 if (node.type !== 'VAR') {
                     if (node.x < treeMinX) treeMinX = node.x;
-                    if (node.left) getMinX(node.left);
-                    if (node.right) getMinX(node.right);
+                    if (node.inputs) node.inputs.forEach(getMinX);
                     if (node.operand) getMinX(node.operand);
                 }
             }

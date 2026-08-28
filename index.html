@@ -67,12 +67,34 @@
                 <label style="font-family: 'MS Sans Serif', Tahoma, sans-serif; font-size: 11px; display: flex; align-items: center; cursor: pointer;">
                     <input type="checkbox" id="optimize-btn" style="margin-right: 5px;"> Optimize Gates (Reuse)
                 </label>
+                <label style="font-family: 'MS Sans Serif', Tahoma, sans-serif; font-size: 11px; display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" id="multi-input-btn" style="margin-right: 5px;"> Multi-Input Gates (A+B+C)
+                </label>
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-muted); cursor: pointer;">
                     <input type="checkbox" id="show-labels" checked>
                     Show Gate Labels
                 </label>
             </div>
         </section>
+        
+        <script>
+            // Restore checkbox states from localStorage
+            ['optimize-btn', 'multi-input-btn', 'show-labels'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const saved = localStorage.getItem(id);
+                if (saved !== null) {
+                    el.checked = saved === 'true';
+                }
+                el.addEventListener('change', () => {
+                    localStorage.setItem(id, el.checked);
+                    // auto-generate circuit if inputs change
+                    if (document.getElementById('equation').value.trim()) {
+                        document.getElementById('generate-btn').click();
+                    }
+                });
+            });
+        </script>
         
         <div class="error-msg" id="error-msg" role="alert" aria-live="assertive"></div>
 
