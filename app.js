@@ -116,7 +116,7 @@ function computeHeights(astNode) {
         astNode.h = 30; // base height for variables
     } else if (astNode.type === 'NOT') {
         computeHeights(astNode.operand);
-        astNode.h = Math.max(50, astNode.operand.h);
+        astNode.h = Math.max(60, astNode.operand.h);
     } else {
         computeHeights(astNode.left);
         computeHeights(astNode.right);
@@ -204,9 +204,12 @@ function renderWires(ctx) {
         let yMax = Math.max(...ys);
         let uniqueYs = [...new Set(ys)];
         for (let y of uniqueYs) {
-            // Only place dots at T-junctions (strictly between min and max)
-            // L-corners (the min and max themselves) do not get dots.
-            if (y > yMin && y < yMax) {
+            // Check if this y is crossed by a horizontal wire
+            let isCrossed = horizontalWires.some(h => h.y === y && h.x1 < bx && h.x2 > bx);
+            
+            // Only place dots at T-junctions or crosses.
+            // L-corners (min/max) get dots only if another wire crosses through them.
+            if ((y > yMin && y < yMax) || isCrossed) {
                 junctionDots.push({x: parseFloat(bx), y: y});
             }
         }
@@ -732,13 +735,13 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         let baseOffsetX = Math.max(requiredWidth - rightPadding + 50, minOffsetX);
         let offsetX = Math.ceil(baseOffsetX / 15) * 15; // Snap to 15px grid to ensure midX lines don't collide
         
-        let offsetY = (maxY === -Infinity) ? requiredHeight / 2 : -minY + Math.max(30, (requiredHeight - (maxY - minY)) / 2); 
+        let offsetY = Math.round(((maxY === -Infinity) ? requiredHeight / 2 : -minY + Math.max(30, (requiredHeight - (maxY - minY)) / 2)) / 15) * 15; 
         
         setPositions(ast, offsetX, offsetY);
         
         let varMap = {};
         let varBusX = {};
-        let varStartY = (requiredHeight - varsHeight) / 2 + 30;
+        let varStartY = Math.round(((requiredHeight - varsHeight) / 2 + 30) / 15) * 15;
         uniqueVars.forEach((v, index) => {
             varMap[v] = { x: 50, y: varStartY + index * 60 };
             varBusX[v] = 90 + index * 15;
