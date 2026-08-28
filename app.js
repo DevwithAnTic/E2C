@@ -324,17 +324,13 @@ function drawGate(ctx, type, x, y, label) {
         }
     } else if (type === 'VAR') {
         ctx.beginPath();
-        ctx.rect(x - 4, y - 12, 24, 24);
-        ctx.fillStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#000000';
+        ctx.arc(x + 20, y, 5, 0, 2 * Math.PI); // Input point dot
+        ctx.fillStyle = '#000000';
         ctx.fill();
-        ctx.stroke();
         
         ctx.font = 'bold 16px "Courier New", monospace';
-        ctx.fillStyle = '#000000';
-        ctx.textAlign = 'center';
-        ctx.fillText(label, x + 8, y + 5);
+        ctx.textAlign = 'right';
+        ctx.fillText(label, x + 10, y + 5); // Label right-aligned beside the point
         ctx.textAlign = 'left';
     }
 }
