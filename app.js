@@ -722,7 +722,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         let varsWidth = 50 + uniqueVars.length * 15 + 40; 
         let equationTextWidth = equationStr.length * 12;
         let rightPadding = Math.max(200, equationTextWidth + 100);
-        let requiredWidth = Math.max(800, -minX + varsWidth + rightPadding);
+        let requiredWidth = Math.max(800, -minX + varsWidth + rightPadding + 50); // Added 50px safety margin for snap rounding
         let varsHeight = uniqueVars.length * 60;
         let requiredHeight = Math.max(400, maxY - minY + 60, varsHeight + 60);
         
@@ -747,8 +747,16 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         injectVarPositions(ast, varMap);
         
         let container = document.querySelector('.circuit-container');
-        let scaleX = container.clientWidth / requiredWidth;
-        let scaleY = container.clientHeight / requiredHeight;
+        let canvas = document.getElementById('circuit-canvas');
+        
+        // Hide canvas temporarily so the container shrinks to its true CSS layout size instead of stretching to fit the old canvas
+        canvas.style.display = 'none';
+        let cw = container.clientWidth;
+        let ch = container.clientHeight;
+        canvas.style.display = 'block';
+        
+        let scaleX = cw / requiredWidth;
+        let scaleY = ch / requiredHeight;
         let fitScale = Math.min(scaleX, scaleY) * 0.95; // 5% padding to keep off edges
         
         // Cap scale to 1.0 so small circuits aren't blown up, but allow shrinking to fit large circuits
