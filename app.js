@@ -135,6 +135,8 @@ function setPositions(astNode, xRight, yCenter) {
     astNode.x = xRight - 60; 
     astNode.y = yCenter;
     
+    // 50px gap between columns makes the total distance 110px.
+    // We will snap midX to the 15px grid explicitly in drawWire to prevent hop overlaps.
     let childXRight = astNode.x - 50; 
     
     if (astNode.type === 'NOT') {
@@ -176,7 +178,9 @@ function addWireSegment(x1, y1, x2, y2) {
 }
 
 function drawWire(ctx, x1, y1, x2, y2) {
-    let midX = x1 + Math.max(15, (x2 - x1) / 2);
+    let exactMid = x1 + Math.max(15, (x2 - x1) / 2);
+    let midX = Math.round(exactMid / 15) * 15; // Snap to 15px grid
+    
     addWireSegment(x1, y1, midX, y1);
     addWireSegment(midX, y1, midX, y2);
     addWireSegment(midX, y2, x2, y2);
@@ -722,7 +726,12 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         let varsHeight = uniqueVars.length * 60;
         let requiredHeight = Math.max(400, maxY - minY + 60, varsHeight + 60);
         
-        let offsetX = requiredWidth - rightPadding + 50;
+        let maxBusX = 90 + (uniqueVars.length - 1) * 15;
+        let minOffsetX = maxBusX + 60 - minX;
+        
+        let baseOffsetX = Math.max(requiredWidth - rightPadding + 50, minOffsetX);
+        let offsetX = Math.ceil(baseOffsetX / 15) * 15; // Snap to 15px grid to ensure midX lines don't collide
+        
         let offsetY = (maxY === -Infinity) ? requiredHeight / 2 : -minY + Math.max(30, (requiredHeight - (maxY - minY)) / 2); 
         
         setPositions(ast, offsetX, offsetY);
