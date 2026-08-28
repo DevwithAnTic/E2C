@@ -151,9 +151,9 @@ function setPositions(astNode, xRight, yCenter) {
 }
 
 function getOutputPort(node) {
-    if (node.type === 'AND') return {x: node.x + 50, y: node.y};
-    if (node.type === 'OR') return {x: node.x + 50, y: node.y};
-    if (node.type === 'NOT') return {x: node.x + 50, y: node.y}; 
+    if (node.type === 'AND') return {x: node.x + 54, y: node.y};
+    if (node.type === 'OR') return {x: node.x + 54, y: node.y};
+    if (node.type === 'NOT') return {x: node.x + 54, y: node.y}; 
     if (node.type === 'VAR') return {x: node.x + 20, y: node.y};
 }
 
