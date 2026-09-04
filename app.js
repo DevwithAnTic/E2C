@@ -894,7 +894,7 @@ document.getElementById('generate-btn').addEventListener('click', () => {
         
         renderCircuit();
         
-        updateSummary(finalGateCounts, uniqueVars, equationStr);
+        updateSummary(finalGateCounts, uniqueVars, ast, equationStr);
         generateTruthTable(ast, uniqueVars);
         document.getElementById('error-msg').style.display = 'none';
         
